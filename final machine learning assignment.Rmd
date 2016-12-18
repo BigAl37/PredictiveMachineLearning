@@ -1,0 +1,114 @@
+---
+title: "Final Machine Learning Assignment"
+author: "BigAl37"
+date: "18 December 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Final Machine Learning Assignment
+##Answering Assignment Question!
+##Note that I will have always announce when I am answering an assignment question.
+##My strategy will be to focus on the numeric data, including those that are numeric factors, convert them to decimals or integers where appropriated and run a random forest algorithm on the training data set. The main 2 reasons for that is to get speed and accuracy, as numeric information contains more information than factors or string.
+
+##I have chosen the random forest algorithm because I don't need to explain the various parameters, but simply predict. The RF algorithm is probably one of the best for this. To improve speed I have limited the number of trees it can generate to 500. I also allow for 7 variables to be randomly sampled at eat split. I have focued the algorithm on accuracy. My resampling method is repeatedcv with 10 fields and 3 repeats. These are the main changes that I have made to the RF algorithm.
+
+###Loading the libraries
+```{r libraries}
+library(caret); library(rattle); library(ggplot2)
+```
+
+###Setting seed for reproducability
+```{r seed}
+set.seed(1)
+```
+
+###Reading the Training & Testing Data Set
+```{r files}
+df <- read.csv2("machinelearning.csv", header = T, sep = ",")
+
+
+df2 <- read.csv2("pml-testing.csv", header = T, sep = ",")
+```
+
+###Cleaning the Training and Testing dataset
+```{r cleaning}
+df.clean <- df[,c('num_window',	'roll_belt',	'pitch_belt',	'yaw_belt',	'total_accel_belt','gyros_belt_x',	'gyros_belt_y',	'gyros_belt_z',	'accel_belt_x',	'accel_belt_y',	'accel_belt_z',	'magnet_belt_x',	'magnet_belt_y',	'magnet_belt_z',	'roll_arm',	'pitch_arm',	'yaw_arm',	'total_accel_arm','gyros_arm_x',	'gyros_arm_y',	'gyros_arm_z',	'accel_arm_x',	'accel_arm_y',	'accel_arm_z',	'magnet_arm_x',	'magnet_arm_y',	'magnet_arm_z','roll_dumbbell',	'pitch_dumbbell',	'yaw_dumbbell','total_accel_dumbbell','gyros_dumbbell_x',	'gyros_dumbbell_y',	'gyros_dumbbell_z',	'accel_dumbbell_x',	'accel_dumbbell_y',	'accel_dumbbell_z',	'magnet_dumbbell_x',	'magnet_dumbbell_y',	'magnet_dumbbell_z',	'roll_forearm',	'pitch_forearm',	'yaw_forearm','total_accel_forearm','gyros_forearm_x',	'gyros_forearm_y',	'gyros_forearm_z',	'accel_forearm_x',	'accel_forearm_y',	'accel_forearm_z',	'magnet_forearm_x',	'magnet_forearm_y',	'magnet_forearm_z',	'classe')]
+
+
+df.clean2 <- df2[,c('num_window',	'roll_belt',	'pitch_belt',	'yaw_belt',	'total_accel_belt','gyros_belt_x',	'gyros_belt_y',	'gyros_belt_z',	'accel_belt_x',	'accel_belt_y',	'accel_belt_z',	'magnet_belt_x',	'magnet_belt_y',	'magnet_belt_z',	'roll_arm',	'pitch_arm',	'yaw_arm',	'total_accel_arm','gyros_arm_x',	'gyros_arm_y',	'gyros_arm_z',	'accel_arm_x',	'accel_arm_y',	'accel_arm_z',	'magnet_arm_x',	'magnet_arm_y',	'magnet_arm_z','roll_dumbbell',	'pitch_dumbbell',	'yaw_dumbbell','total_accel_dumbbell','gyros_dumbbell_x',	'gyros_dumbbell_y',	'gyros_dumbbell_z',	'accel_dumbbell_x',	'accel_dumbbell_y',	'accel_dumbbell_z',	'magnet_dumbbell_x',	'magnet_dumbbell_y',	'magnet_dumbbell_z',	'roll_forearm',	'pitch_forearm',	'yaw_forearm','total_accel_forearm','gyros_forearm_x',	'gyros_forearm_y',	'gyros_forearm_z',	'accel_forearm_x',	'accel_forearm_y',	'accel_forearm_z',	'magnet_forearm_x',	'magnet_forearm_y',	'magnet_forearm_z')]
+```
+
+
+###Cleaning data and converting factors to decimals
+```{r cleaning2}
+n <- length(df.clean)
+n2 <- length(df.clean2)
+
+
+
+n <- n - 1
+
+for (i in 1:n) {
+    if(is.numeric(df.clean[,i]) == TRUE) {
+        df.clean[,i] <- as.numeric(df.clean[,i])
+    } else if(is.factor(df.clean[,i]) == T) {
+        df.clean[, i] <- as.numeric(levels(df.clean[,i])[df.clean[,i]])
+    }
+}
+
+for (i in 1:n2) {
+    if(is.numeric(df.clean2[,i]) == TRUE) {
+        df.clean2[,i] <- as.numeric(df.clean2[,i])
+    } else if(is.factor(df.clean2[,i]) == T) {
+        df.clean2[, i] <- as.numeric(levels(df.clean2[,i])[df.clean2[,i]])
+    }
+}
+```
+
+
+###Partition the training data set into a training and testing
+```{r partition}
+inTrain <- createDataPartition(y=df.clean$classe, p=0.75, list = FALSE)
+
+training <- df.clean[inTrain,]
+testing <- df.clean[-inTrain,]
+```
+
+
+###Set the Machine Learning Parameters
+```{r set}
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+metric <- "Accuracy"
+mtry <- floor(sqrt(ncol(training)))
+tunegrid <- expand.grid(.mtry = mtry)
+```
+
+
+
+###Training
+```{r training}
+predict <- train(classe ~ ., data = training, method = "rf",  metric=metric, tuneGrid=tunegrid, trControl=control)
+```
+
+
+###Check my results
+```{r results}
+predicted <- predict(predict, testing)
+confusionMatrix(predicted, testing$classe)
+```
+
+##Answering Assignment Question!
+##At this point I am very happy with the accuracy. The insample accuracy is over 99%. I expect the out of sample error to be more than 1%, due to overfitting (signal and noise). However, because the Testing data set is so small (20 data points), it's possible that my accuracy is 100% and error 0%.
+
+###Now predict the Test Data Set and get the result
+```{r final}
+predicted2 <- predict(predict, df.clean2)
+predicted2
+```
+
+
+
